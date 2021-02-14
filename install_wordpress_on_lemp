@@ -1,0 +1,116 @@
+Steps:
+1. initial server setup with 2 non root users
+2. install nginx, mysql and php
+3. hook up domain name to droplet
+4. set up server block for domain name
+5. configure and test php processing
+6. install wordpress
+7. upload theme
+8. ssl cert using certbot
+
+
+
+1. Setting up ubuntu server
+
+  1. Create a droplet on digital ocean, set as password login initially, not ssh key
+  2. ssh into into droplet as root user
+  3. Update packages
+  4. Optionally upgrade packages
+  5. Create new user for Alex:
+    $ adduser USER_NAME
+  6. Give new user sudo (root) priviledges:
+    $ usermod -aG sudo USER_NAME
+  7. Add ssh key to authorized keys in NEW_USER folder so that the new user can login by ssh
+    $ mkdir /home/USER_NAME/.ssh
+    $ cd /home/USER_NAME/.ssh
+    $ touch authorized_keys
+  8. Paste public key into authorized_keys file
+  9. Change everything in the alex folder to owner alex: (chown: change owner, -R: recursive so everything inside the specified folder)
+    $ chown -R alex:alex /home/alex
+  10. Alex log out of root, Jamie log into root
+  11. Repeat steps 5-9 for Jamie user
+  12. Alex log back into root and add ssh key to authorized keys file just incase ever need root login (if we created 2 users)
+  13. Test both users can ssh in
+  14. Alex login as Alex
+  15. Set password login to no and disable root ssh login
+    $ sudo nano /etc/ssh/sshd_config
+    PasswordAuthentication no
+    PermitRootLogin no
+  16. Reload ssh system:
+    $ sudo systemctl reload sshd
+  17. Set firewall and allow ssh
+    $ sudo ufw allow OpenSSH
+    $ sudo ufw enable
+    $sudo ufw status
+
+
+2, 4, 5.
+  https://www.digitalocean.com/community/tutorials/how-to-install-linux-nginx-mysql-php-lemp-stack-on-ubuntu-20-04
+  (skip testing php database connection bit)
+
+
+3. Hook up domain name to droplet
+  1. Add domain name in digital ocean control pannel
+  2. Add an A record for @ and for www to your droplet, DNS records for that domain should look like this:
+
+  A  www.jbwebsites.work  159.65.90.239  3600
+  A  jbwebsites.work  159.65.90.239  3600 
+  NS  jbwebsites.work  ns1.digitalocean.com.  1800
+  NS  jbwebsites.work  ns2.digitalocean.com.  1800
+  NS  jbwebsites.work  ns3.digitalocean.com.  1800
+
+  3. Add custom nameserver records to DNS with domain name provider
+
+  ns1.digitalocean.com
+  ns2.digitalocean.com
+  ns3.digitalocean.com
+
+
+6. Install wordpress
+  https://www.digitalocean.com/community/tutorials/how-to-install-wordpress-with-lemp-on-ubuntu-20-04
+
+
+7. Upload theme
+  Git clone it from my github account
+
+
+8. SSL cert with certbot
+  https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-ubuntu-20-04
+
+
+DONE!
+
+
+
+Trouble shooting:
+
+The problem with 403 forbidden error was the line below the web root, the snippet below is from the jbwebsites.work server block. Here it doesn't have index.php defined as a file to look for whereas the default server block does and therefore doesn't get the 403 forbidden error.
+
+Snippet from jbwebsites.work server block:
+
+root /var/www/jbwebsites.work/html;
+index index.html;
+
+full config file for default server block that I just put Liv's wordpress on
+
+server {
+    listen 80;
+    server_name your_domain www.your_domain;
+    root /var/www/your_domain;
+
+    index index.html index.htm index.php;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
+     }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+}
